@@ -1,0 +1,5 @@
+# Dependency directories
+node_modules
+
+#bulky files
+*.mp3
