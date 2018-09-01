@@ -1,6 +1,8 @@
 const readline = require('readline');
 const ytdl = require('ytdl-core');
 const ffmpeg = require('fluent-ffmpeg');
+const sanitize = require("sanitize-filename");
+
 
 // youtube video ids array
 let ids = ['1W5BA0lDVLM'];
@@ -10,6 +12,7 @@ let counter = ids.length - 1;
 function init() {
 
     let id = ids[counter];
+    // console.log(id,' = ',counter);
     counter--;
 
     let stream = ytdl(id, {
@@ -18,7 +21,7 @@ function init() {
 
     ytdl.getInfo(id, function (e, i) {
         console.log('-------> ', i.title);
-        title = i.title;
+        title = sanitize(i.title);
         initiateDownload();
     });
 
@@ -26,8 +29,8 @@ function init() {
         let start = Date.now();
         ffmpeg(stream)
             .audioBitrate(320)
-            // .save(`${__dirname}/downloads/${title}_${id}.mp3`)
-            .save(`${__dirname}/downloads/${id}.mp3`)
+            .save(`${__dirname}/downloads/${title}_${id}.mp3`)
+            // .save(`${__dirname}/downloads/${id}.mp3`)
             .on('progress', (p) => {
                 readline.cursorTo(process.stdout, 0);
                 process.stdout.write(`${p.targetSize}kb downloaded`);
