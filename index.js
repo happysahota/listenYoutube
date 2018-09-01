@@ -22,6 +22,7 @@ function init() {
     ytdl.getInfo(id, function (e, i) {
         console.log('-------> ', i.title);
         title = sanitize(i.title);
+        id = i.video_id;
         initiateDownload();
     });
 
