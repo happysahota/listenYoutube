@@ -11,6 +11,8 @@
   "license": "ISC",
   "dependencies": {
     "fluent-ffmpeg": "^2.1.2",
+    "cheerio": "latest",
+    "request": "^2.88.0",
     "sanitize-filename": "^1.6.1",
     "ytdl-core": "^0.24.0"
   }

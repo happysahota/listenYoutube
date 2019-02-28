@@ -2,16 +2,49 @@ const readline = require('readline');
 const ytdl = require('ytdl-core');
 const ffmpeg = require('fluent-ffmpeg');
 const sanitize = require("sanitize-filename");
+var request = require('request');
+var cheerio = require('cheerio');
 
+
+const url = 'https://www.youtube.com/watch?v=w-7RQ46RgxU&list=PL4cUxeGkcC9gcy9lrvMJ75z9maRw4byYp';
 
 // youtube video ids array
-let ids = ['1W5BA0lDVLM'];
+let videoIdsArray = [];
 let title = '';
-let counter = ids.length - 1;
+let counter = videoIdsArray.length - 1;
 
-function init() {
+function fetchVideosList() {
+    request.get(url, function (er, res, body) {
+        if (er) {
+            console.error("Error: ", er);
+            throw er;
+        } else {
+            var videoIdsArray = [];
 
-    let id = ids[counter];
+            var $ = cheerio.load(body);
+            $("li.yt-uix-scroller-scroll-unit a").each(function (link) {
+                // console.log($(this).attr('href'));
+                var vidUrl = 'https://www.youtube.com' + $(this).attr('href').replace(/&amp;/g, '&');
+
+                videoIdsArray.push(vidUrl);
+            });
+
+            if(!videoIdsArray.length) {
+                videoIdsArray.push(url);
+
+                // Start Download.
+                initDownloader();
+            }
+        }
+
+    });
+
+    
+}
+
+function initDownloader() {
+
+    let id = videoIdsArray[counter];
     // console.log(id,' = ',counter);
     counter--;
 
@@ -39,10 +72,11 @@ function init() {
             .on('end', () => {
                 console.log(`\ndone, thanks - ${(Date.now() - start) / 1000}s, Next id: ${counter}`);
                 if (counter >= 0) {
-                    init();
+                    initDownloader();
                 }
             });
     }
 }
 
-init();
+// Support to youtube playlist added.
+fetchVideosList();
