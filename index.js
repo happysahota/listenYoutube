@@ -2,49 +2,42 @@ const readline = require('readline');
 const ytdl = require('ytdl-core');
 const ffmpeg = require('fluent-ffmpeg');
 const sanitize = require("sanitize-filename");
+
 var request = require('request');
 var cheerio = require('cheerio');
 
 
-const url = 'https://www.youtube.com/watch?v=w-7RQ46RgxU&list=PL4cUxeGkcC9gcy9lrvMJ75z9maRw4byYp';
-
 // youtube video ids array
-let videoIdsArray = [];
-let title = '';
-let counter = videoIdsArray.length - 1;
 
-function fetchVideosList() {
-    request.get(url, function (er, res, body) {
+let videoIds = [];
+let title = '';
+let counter = videoIds.length - 1;
+
+
+function fetchPlaylist() {
+    request.get("https://www.youtube.com/watch?v=w-7RQ46RgxU&list=PL4cUxeGkcC9gcy9lrvMJ75z9maRw4byYp", function (er, res, body) {
         if (er) {
             console.error("Error: ", er);
             throw er;
         } else {
-            var videoIdsArray = [];
-
             var $ = cheerio.load(body);
             $("li.yt-uix-scroller-scroll-unit a").each(function (link) {
                 // console.log($(this).attr('href'));
-                var vidUrl = 'https://www.youtube.com' + $(this).attr('href').replace(/&amp;/g, '&');
+                var url = 'https://www.youtube.com' + $(this).attr('href').replace(/&amp;/g, '&');
 
-                videoIdsArray.push(vidUrl);
+                videoIds.push(url);
             });
 
-            if(!videoIdsArray.length) {
-                videoIdsArray.push(url);
-
-                // Start Download.
-                initDownloader();
-            }
+            console.log(videoIds);
         }
-
+        init();
     });
-
-    
 }
 
-function initDownloader() {
 
-    let id = videoIdsArray[counter];
+function init() {
+console.log(videoIds);
+    let id = videoIds[counter];
     // console.log(id,' = ',counter);
     counter--;
 
@@ -72,11 +65,10 @@ function initDownloader() {
             .on('end', () => {
                 console.log(`\ndone, thanks - ${(Date.now() - start) / 1000}s, Next id: ${counter}`);
                 if (counter >= 0) {
-                    initDownloader();
+                    init();
                 }
             });
     }
 }
 
-// Support to youtube playlist added.
-fetchVideosList();
+fetchPlaylist();
