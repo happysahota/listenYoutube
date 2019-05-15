@@ -11,7 +11,7 @@ var cheerio = require('cheerio');
 
 let videoIds = [];
 let title = '';
-let counter = videoIds.length - 1;
+let counter = 0;
 
 
 function fetchPlaylist() {
@@ -28,15 +28,17 @@ function fetchPlaylist() {
                 videoIds.push(url);
             });
 
-            console.log(videoIds);
+            // console.log(videoIds);
         }
+        counter = videoIds.length - 1;
         init();
     });
 }
 
 
 function init() {
-console.log(videoIds);
+
+    // console.log(counter);
     let id = videoIds[counter];
     // console.log(id,' = ',counter);
     counter--;
