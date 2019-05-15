@@ -9,5 +9,6 @@ While this tool makes it easy to download content from Youtube, I do not endorse
 
 Just clone this repository. You should know what to do with it... else you don't deserve it. :trollface: **`It's easy buddy`**.
 
-1: npm start
-2: node index.js
+1: npm install
+
+2: npm start or node index.js
