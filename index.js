@@ -19,28 +19,37 @@ var logFileName = 'youtube.txt';
 var playlistDirectory = "unamed";
 
 
+var fileReadStream, fileWriteStream;
+
+
+var fileChecked = false;
+
+var newIdsArray = [];
+
+
 function fetchPlaylist() {
-    request.get("https://www.youtube.com/watch?v=5O3ls3RTeuk&list=PLunlFzx6l6pLS4hwMgS__63VfpNOIKwwa", function (er, res, body) {
+    // you nee to put the url of play list not of the page where playlist getting played.
+    request.get("https://www.youtube.com/playlist?list=PLunlFzx6l6pLuTFWZAFdiBhm_S0Zk6oFl", function (er, res, body) {
         if (er) {
             console.error("Error: ", er);
             throw er;
         } else {
             
             var $ = cheerio.load(body);
-            playlistDirectory = $('h3.playlist-title a').text();
-            $("li.yt-uix-scroller-scroll-unit a").each(function (link) {
+            playlistDirectory = ($('h1.pl-header-title').text()).trim();
+            // fs.writeFileSync("ytRowData.html", $("body").html());
+            // console.log("->",playlistDirectory,"<-");return;
 
+            $(".pl-video-title a.pl-video-title-link").each(function (link) {
                 url_string = 'https://www.youtube.com' + $(this).attr('href').replace(/&amp;/g, '&');
                 url_parts = url.parse(url_string, true);
-
-                //Check if song already downloaded in past.
-                checkLog(url_parts.query.v, (vid) => {
-
-                    console.log("Starting download of ", vid);
-                    init(vid);
-
-                });
+                
+                newIdsArray.push(url_parts.query.v);
             });
+            
+            // console.log(newIdsArray);
+            //Check if song already downloaded in past.
+            checkLog();
 
         }
     });
@@ -52,51 +61,57 @@ function checkLog(vid, callback) {
 
     let videoLogs = [];
     let filePath = `${__dirname}/${downloadsFolder}/${logFileName}`;
-    let dataExists = false;
 
+    if (!fileChecked) {
+        fileChecked = true;
+        fs.open(filePath, 'a+', (err, fo) => {
 
-    fs.open(filePath, 'a+', (err, fo) => {
-
-        if (err) {
-            return console.log("Errr: ", err);
-        }
-
-        //File streams start
-        var fileReadStream = fs.createReadStream(filePath, { encoding: 'utf8', flag: 'r' });
-        var fileWriteStream = fs.createWriteStream(filePath, {flags:'a'});
-        
-        fileReadStream.on('data', (data) => {
-
-            dataExists = true;
-            videoLogs = data.split('\r\n');
-            if(videoLogs.indexOf(vid) === -1) {
-
-                callback(vid);                
-                fileWriteStream.write(vid+'\r\n');
-
-            } else {
-                console.warn(vid, " : Already downloaded in the past.");
+            if (err) {
+                return console.log("Errr: ", err);
             }
 
         });
 
-        fileReadStream.on('end', ()=>{
-            if(!dataExists) {
+    }
 
-                callback(vid);            
-                fileWriteStream.write(vid+'\r\n');
+    //File streams start
+    fileReadStream = fs.createReadStream(filePath, { encoding: 'utf8', flag: 'r' });
+    fileWriteStream = fs.createWriteStream(filePath, { flags: 'a' });
 
-            }            
-        });
+    fileReadStream.on('data', (data) => {
 
+        dataExists = true;
+        videoLogs = data.split('\r\n');
 
+        newIdsArray.forEach((val, i)=>{
+            if (videoLogs.indexOf(val) !== -1) {
+
+                console.warn(val, " : Already downloaded in the past.");
+
+                //remove the item already downloaded in the past
+                newIdsArray.splice(i, 1);
+    
+            } else {
+                console.info(val, " : New video.");
+            }
+        });       
 
     });
-    
+
+    fileReadStream.on('end', () => {
+
+        //initiating Downloads
+        // console.log("=================>>>>>>>>>> Init called");
+        init();
+        
+    });
+
 }
 
 
-function init(id) {
+function init() {
+
+    var id = newIdsArray.pop();
 
     if (!fs.existsSync(`${__dirname}/${downloadsFolder}/${playlistDirectory}`)) {
         fs.mkdirSync(`${__dirname}/${downloadsFolder}/${playlistDirectory}`);
@@ -105,15 +120,18 @@ function init(id) {
     let stream = ytdl(id, {
         quality: 'highestaudio',
     });
-
+    
     ytdl.getInfo(id, function (e, i) {
-        console.log('-------> ', i.title);
-        title = sanitize(i.title);
-        id = i.video_id;
+        // fs.writeFileSync("ytdl.getInfo.json", JSON.stringify(i));
+        console.log('Downloading -------> ', i.player_response.videoDetails.title);
+        title = sanitize(i.player_response.videoDetails.title);
+        // id = i.player_response.videoDetails.videoId;
+        
         initiateDownload();
     });
 
     function initiateDownload() {
+        
         let start = Date.now();
         ffmpeg(stream)
             .audioBitrate(320)
@@ -125,6 +143,16 @@ function init(id) {
             .on('end', () => {
                 // console.log(`\ndone, thanks - ${(Date.now() - start) / 1000}s, Next id: ${counter}`);
                 console.log(`\ndone, thanks - ${(Date.now() - start) / 1000}s`);
+                
+                fileWriteStream.write(id + '\r\n');
+                if(newIdsArray.length) {
+                    // console.log("=================>>>>>>>>>> Init Recalled");
+                    init();
+                }
+            }).on('error', (err, stdout, stderr) => {
+                console.log("ffmpeg err:\n" + err);
+                console.log("ffmpeg stdout:\n" + stdout);
+                console.log("ffmpeg stderr:\n" + stderr);
             });
     }
 }

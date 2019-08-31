@@ -3,3 +3,7 @@ node_modules
 
 #bulky files
 *.mp3
+ytdl.getInfo.json
+ytRowData.html
+loggggg.txt
+downloads/youtube.txt
